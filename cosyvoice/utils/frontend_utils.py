@@ -1,23 +1,15 @@
-# Copyright (c) 2024 Alibaba Inc (authors: Xiang Lyu, Zhihao Du)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import re
-chinese_char_pattern = re.compile(r'[\u4e00-\u9fff]+')
+import inflect
 
-# whether contain chinese character
+chinese_char_pattern = re.compile(r'[\u4e00-\u9fff]+')
+vietnamese_char_pattern = re.compile(r'[ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯưẠ-ỹ]+')
+
+# whether contain Chinese or Vietnamese character
 def contains_chinese(text):
     return bool(chinese_char_pattern.search(text))
+
+def contains_vietnamese(text):
+    return bool(vietnamese_char_pattern.search(text))
 
 
 # replace special symbol
@@ -56,29 +48,34 @@ def spell_out_number(text: str, inflect_parser):
     return ''.join(new_text)
 
 
-# split paragrah logic：
+# split paragraph logic：
 # 1. per sentence max len token_max_n, min len token_min_n, merge if last sentence len less than merge_len
 # 2. cal sentence len according to lang
-# 3. split sentence according to puncatation
+# 3. split sentence according to punctuation
 def split_paragraph(text: str, tokenize, lang="zh", token_max_n=80, token_min_n=60, merge_len=20, comma_split=False):
     def calc_utt_length(_text: str):
-        if lang == "zh":
+        if lang == "zh" or lang == "vi":
             return len(_text)
         else:
             return len(tokenize(_text))
 
     def should_merge(_text: str):
-        if lang == "zh":
+        if lang == "zh" or lang == "vi":
             return len(_text) < merge_len
         else:
             return len(tokenize(_text)) < merge_len
 
     if lang == "zh":
-        pounc = ['。', '？', '！', '；', '：', '、', '.', '?', '!', ';']
+        pounc = ['。', '？', '！', '；', '：', '.', '?', '!', ';']
+    elif lang == "vi":
+        pounc = ['.', '?', '!', ';', ':', '…']
     else:
         pounc = ['.', '?', '!', ';', ':']
     if comma_split:
-        pounc.extend(['，', ','])
+        if lang == "zh":
+            pounc.extend(['，', ','])
+        elif lang == "vi":
+            pounc.extend([',', '，'])
     st = 0
     utts = []
     for i, c in enumerate(text):
@@ -91,11 +88,6 @@ def split_paragraph(text: str, tokenize, lang="zh", token_max_n=80, token_min_n=
                 st = i + 2
             else:
                 st = i + 1
-    if len(utts) == 0:
-        if lang == "zh":
-            utts.append(text + '。')
-        else:
-            utts.append(text + '.')
     final_utts = []
     cur_utt = ""
     for utt in utts:
@@ -112,7 +104,7 @@ def split_paragraph(text: str, tokenize, lang="zh", token_max_n=80, token_min_n=
     return final_utts
 
 
-# remove blank between chinese character
+# remove blank between Chinese or Vietnamese characters
 def replace_blank(text: str):
     out_str = []
     for i, c in enumerate(text):

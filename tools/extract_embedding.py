@@ -33,7 +33,7 @@ def main(args):
 
     option = onnxruntime.SessionOptions()
     option.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
-    option.intra_op_num_threads = 1
+    option.intra_op_num_threads = 6
     providers = ["CPUExecutionProvider"]
     ort_session = onnxruntime.InferenceSession(args.onnx_path, sess_options=option, providers=providers)
 

@@ -31,15 +31,19 @@ def main(args):
 
     option = onnxruntime.SessionOptions()
     option.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
-    option.intra_op_num_threads = 1
+    option.intra_op_num_threads = 8
     providers = ["CUDAExecutionProvider"]
     ort_session = onnxruntime.InferenceSession(args.onnx_path, sess_options=option, providers=providers)
 
     utt2speech_token = {}
     for utt in tqdm(utt2wav.keys()):
         audio, sample_rate = torchaudio.load(utt2wav[utt])
+        # if audio.shape[0] == 2:
+        #     print(audio.shape)
+        #     print(utt2wav[utt])
         if sample_rate != 16000:
             audio = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)(audio)
+            
         if audio.shape[1] / 16000 > 30:
             logging.warning('do not support extract speech token for audio longer than 30s')
             speech_token = []
